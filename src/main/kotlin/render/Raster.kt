@@ -45,6 +45,7 @@ object Raster {
                 val gamma = w2 / totalAreaX2
 
                 val color = program.fragment.apply(
+                    x,y,
                     v0, vv0,
                     v1, vv1,
                     v2, vv2,

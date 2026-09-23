@@ -5,11 +5,32 @@ import kofeychi.render.*
 import java.awt.*
 import java.awt.image.BufferedImage
 import java.awt.image.DataBufferInt
+import java.io.File
+import javax.imageio.ImageIO
 import javax.swing.*
 import kotlin.math.cos
 import kotlin.math.sin
 
 var time = 0f
+
+data class Texture(val width: Int, val height: Int, val data: IntArray)
+
+val tex by lazy {
+    val originalImage = ImageIO.read(File("C:\\Users\\11\\Documents\\GitHub\\softwareRenderer\\src\\main\\resources\\texture.png"))
+
+    val intImage = BufferedImage(
+        originalImage.width,
+        originalImage.height,
+        BufferedImage.TYPE_INT_ARGB
+    )
+
+    val g = intImage.createGraphics()
+    g.drawImage(originalImage, 0, 0, null)
+    g.dispose()
+
+    val data = (intImage.raster.dataBuffer as DataBufferInt).data
+    Texture(originalImage.width, originalImage.height, data)
+}
 
 fun VectorF4.toARGB(): Int {
     val ir = (x.coerceIn(0.0f, 1.0f) * 255).toInt()
@@ -21,6 +42,7 @@ fun VectorF4.toARGB(): Int {
 
 class Vert(
     override val pos: VectorF2,
+    val uv: VectorF2
 ) : Vertex
 
 class VertShader : VertexShader<Vert> {
@@ -41,6 +63,8 @@ class VertShader : VertexShader<Vert> {
 
 class FragShader : FragmentShader<Vert> {
     override fun apply(
+        x: Int,
+        y: Int,
         v0: Vert,
         vv0: VectorF2,
         v1: Vert,
@@ -50,12 +74,23 @@ class FragShader : FragmentShader<Vert> {
         alpha: Float,
         beta: Float,
         gamma: Float
-    ): VectorF4 = VectorF4(
-        alpha,
-        beta,
-        gamma,
-        1f
-    )
+    ): VectorF4 {
+
+        val u = v0.uv.x * alpha + v1.uv.x * beta + v2.uv.x * gamma
+        val v = v0.uv.y * alpha + v1.uv.y * beta + v2.uv.y * gamma
+        
+        val texX = (u * (tex.width - 1)).toInt().coerceIn(0, tex.width - 1)
+        val texY = (v * (tex.height - 1)).toInt().coerceIn(0, tex.height - 1)
+
+        val c = tex.data[texY * tex.width + texX]
+
+        return VectorF4(
+            ((c shr 16) and 0xFF) / 255f, // R -> x
+            ((c shr 8)  and 0xFF) / 255f, // G -> y
+            (c and 0xFF) / 255f,          // B -> z
+            ((c shr 24) and 0xFF) / 255f  // A -> w
+        )
+    }
 }
 
 val program = Program(
@@ -93,10 +128,10 @@ class Rasterrrrr(width: Int, height: Int) : JPanel() {
         Raster.quad(
             program,
             renderTarget,
-            Vert(VectorF2(0f,0f)),
-            Vert(VectorF2(0f,600f)),
-            Vert(VectorF2(600f,0f)),
-            Vert(VectorF2(600f,600f))
+            Vert(VectorF2(0f,0f),     VectorF2(0f, 0f)),
+            Vert(VectorF2(0f,600f),   VectorF2(0f, 1f)),
+            Vert(VectorF2(600f,0f),   VectorF2(1f, 0f)),
+            Vert(VectorF2(600f,600f), VectorF2(1f, 1f))
         )
         g.drawImage(canvasImage, 0, 0, null)
     }

@@ -18,6 +18,7 @@ interface VertexShader<V : Vertex> : Shader<V> {
 
 interface FragmentShader<V : Vertex> : Shader<V> {
     fun apply(
+        x: Int,y: Int,
         v0: V,vv0: VectorF2,
         v1: V,vv1: VectorF2,
         v2: V,vv2: VectorF2,
